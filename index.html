@@ -1,0 +1,4178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Badminton Queue Manager</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f1f5f9;
+    color: #172033;
+}
+
+header {
+    background: #166534;
+    color: white;
+    padding: 18px 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 25px;
+}
+
+.header-info {
+    font-size: 14px;
+}
+
+.save-status {
+    margin-left: 8px;
+    color: #dcfce7;
+}
+
+.container {
+    max-width: 1500px;
+    margin: auto;
+    padding: 20px;
+}
+
+.control-panel,
+.queue-section,
+.matches-section,
+.summary-section {
+    background: white;
+    padding: 18px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    margin-bottom: 20px;
+}
+
+h2 {
+    margin-top: 0;
+}
+
+.form-row,
+.fee-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+input,
+select,
+button {
+    padding: 11px 14px;
+    border-radius: 7px;
+    border: 1px solid #cbd5e1;
+    font-size: 14px;
+}
+
+input {
+    flex: 1;
+    min-width: 200px;
+}
+
+button {
+    cursor: pointer;
+    border: none;
+    font-weight: bold;
+}
+
+button:hover {
+    opacity: .9;
+}
+
+.queue-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.done-playing-button { width:100%; margin-top:6px; background:#2563eb; color:white; font-size:11px; padding:7px 8px; }
+.match-player-row { display:flex; gap:5px; align-items:center; margin:5px 0; }
+.match-player-select { flex:1; min-width:0; padding:7px; font-size:12px; }
+.match-player-remove { padding:6px 8px; background:#dc2626; color:white; font-size:11px; }
+.match-team-label { font-size:11px; font-weight:bold; color:#64748b; margin-top:8px; }
+
+.btn-primary {
+    background: #16a34a;
+    color: white;
+}
+
+.btn-blue {
+    background: #2563eb;
+    color: white;
+}
+
+.btn-danger {
+    background: #dc2626;
+    color: white;
+}
+
+.btn-orange {
+    background: #ea580c;
+    color: white;
+}
+
+.btn-gray {
+    background: #64748b;
+    color: white;
+}
+
+.fee-section {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.fee-box {
+    flex: 1;
+    min-width: 180px;
+}
+
+.fee-box label {
+    display: block;
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 5px;
+}
+
+.fee-box input {
+    width: 100%;
+}
+
+.fee-summary {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    font-weight: bold;
+}
+
+.reset-area {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.reset-warning {
+    color: #64748b;
+    font-size: 13px;
+    flex-basis: 100%;
+}
+
+.section-header,
+.courts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+.queue-info {
+    color: #64748b;
+    font-size: 14px;
+}
+
+
+/* =====================================================
+   WAITING QUEUE
+===================================================== */
+
+.waiting-list {
+    min-height: 130px;
+    border: 2px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: #f8fafc;
+}
+
+.waiting-list.drag-over,
+.matches.drag-over,
+.court.drag-over {
+    background: #dcfce7;
+    border-color: #16a34a;
+}
+
+
+/* =====================================================
+   PLAYER CARD
+===================================================== */
+
+.player-card {
+    position: relative;
+    width: 175px;
+    background: white;
+    border: 1px solid #dbe3ea;
+    border-left: 5px solid #16a34a;
+    border-radius: 9px;
+    padding: 12px;
+    cursor: grab;
+    box-shadow: 0 2px 5px rgba(0,0,0,.08);
+    user-select: none;
+    transition:
+        border-color .2s,
+        background .2s,
+        box-shadow .2s;
+}
+
+.player-card:active {
+    cursor: grabbing;
+}
+
+.player-card.selected {
+    background: #dcfce7;
+    box-shadow: 0 0 0 2px #22c55e;
+}
+
+/* Selected state for players waiting over 15 minutes (Green) */
+.player-card.selected.waiting-alert {
+    background: #bbf7d0;
+    box-shadow: 0 0 0 3px #16a34a;
+    border-left-color: #16a34a;
+}
+
+.player-name {
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 7px;
+    padding-right: 20px;
+}
+
+.category {
+    display: inline-block;
+    padding: 4px 7px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.beginner {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.intermediate {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.advanced {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.player-stats {
+    border-top: 1px solid #e2e8f0;
+    margin-top: 9px;
+    padding-top: 8px;
+    font-size: 12px;
+    color: #475569;
+}
+
+.waiting-time {
+    margin-top: 7px;
+    font-size: 13px;
+    color: #64748b;
+}
+
+.remove-player {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    background: transparent;
+    color: #ef4444;
+    padding: 2px 5px;
+}
+
+
+/* =====================================================
+   15-MINUTE WAITING ALERT
+===================================================== */
+
+.player-card.waiting-alert {
+    border-left: 6px solid #dc2626;
+    background: #fff1f2;
+    box-shadow:
+        0 0 0 2px rgba(220,38,38,.15),
+        0 3px 8px rgba(220,38,38,.12);
+}
+
+.player-card.waiting-alert .player-name {
+    color: #dc2626;
+}
+
+.player-card.waiting-alert .waiting-time {
+    color: #dc2626;
+    font-weight: bold;
+}
+
+.waiting-alert-badge {
+    display: inline-block;
+    margin-top: 7px;
+    padding: 4px 8px;
+    border-radius: 20px;
+    background: #dc2626;
+    color: white;
+    font-size: 11px;
+    font-weight: bold;
+    animation: queueAlert 1.2s infinite;
+}
+
+@keyframes queueAlert {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: .55;
+    }
+}
+
+
+/* =====================================================
+   PAYMENT
+===================================================== */
+
+.summary-search {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    align-items: center;
+}
+
+.summary-search input {
+    max-width: 520px;
+    flex: 1;
+}
+
+.summary-search-clear {
+    background: #64748b;
+    color: white;
+    padding: 11px 14px;
+}
+
+.summary-payment-controls {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    min-width: 190px;
+}
+
+.summary-payment-controls .payment-method {
+    flex: 1;
+}
+
+.payment-section {
+    margin-top: 10px;
+    padding-top: 9px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.payment-method {
+    flex: 1;
+    min-width: 0;
+    padding: 7px;
+    font-size: 12px;
+}
+
+.paid-button {
+    padding: 7px 9px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.paid-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 15px;
+    background: #dcfce7;
+    color: #166534;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+
+/* =====================================================
+   READY MATCHES
+===================================================== */
+
+.matches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    min-height: 100px;
+    padding: 5px;
+    border: 2px dashed transparent;
+    border-radius: 10px;
+}
+
+.match-card {
+    width: 280px;
+    background: #eff6ff;
+    border: 2px solid #60a5fa;
+    border-radius: 10px;
+    padding: 12px;
+    cursor: grab;
+    user-select: none;
+}
+
+.match-card:active {
+    cursor: grabbing;
+}
+
+.match-title {
+    font-weight: bold;
+    color: #1d4ed8;
+    margin-bottom: 8px;
+}
+
+.match-player {
+    background: white;
+    padding: 7px;
+    margin: 4px 0;
+    border-radius: 6px;
+}
+
+
+/* =====================================================
+   COURTS
+===================================================== */
+
+.courts {
+    display: grid;
+    grid-template-columns: repeat(
+        auto-fit,
+        minmax(310px, 1fr)
+    );
+    gap: 18px;
+}
+
+.court {
+    background: white;
+    border-radius: 12px;
+    padding: 15px;
+    border-top: 5px solid #16a34a;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    min-height: 330px;
+}
+
+.court-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.court-title {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.court-status {
+    padding: 5px 8px;
+    border-radius: 20px;
+    background: #dcfce7;
+    color: #166534;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.court-status.playing {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.court-drop {
+    min-height: 105px;
+    border: 2px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 10px;
+}
+
+.court-player {
+    background: #f8fafc;
+    padding: 7px;
+    border-radius: 6px;
+    margin-bottom: 5px;
+}
+
+.game-time {
+    text-align: center;
+    font-size: 30px;
+    font-family: monospace;
+    font-weight: bold;
+    margin: 12px 0;
+}
+
+.shuttle-label {
+    color: #64748b;
+    font-size: 13px;
+    margin-bottom: 5px;
+}
+
+.court-controls {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.court-select {
+    width: 100%;
+}
+
+.empty-message {
+    width: 100%;
+    text-align: center;
+    color: #94a3b8;
+    padding: 30px;
+}
+
+
+/* =====================================================
+   SHUTTLE TOTALS SECTION
+===================================================== */
+
+.shuttle-totals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+    padding: 15px 20px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 20px;
+}
+
+.shuttle-total-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+}
+
+.shuttle-total-item .label {
+    color: #64748b;
+    font-weight: normal;
+}
+
+.shuttle-total-item .value {
+    font-weight: bold;
+    font-size: 20px;
+    min-width: 30px;
+}
+
+.shuttle-total-item .value.lm10 {
+    color: #2563eb;
+}
+
+.shuttle-total-item .value.lm60 {
+    color: #7c3aed;
+}
+
+.shuttle-total-item .value.games {
+    color: #16a34a;
+}
+
+
+/* =====================================================
+   SUMMARY
+===================================================== */
+
+.summary-section {
+    overflow-x: auto;
+}
+
+.summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 950px;
+}
+
+.summary-table th,
+.summary-table td {
+    padding: 10px;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: left;
+}
+
+.summary-table th {
+    background: #f8fafc;
+}
+
+.total-pay {
+    font-weight: bold;
+    color: #166534;
+}
+
+
+/* =====================================================
+   PAYMENT TOTALS
+===================================================== */
+
+.payment-totals {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.payment-total-card {
+    padding: 18px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.payment-total-label {
+    font-size: 14px;
+    color: #64748b;
+    margin-bottom: 7px;
+}
+
+.payment-total-amount {
+    font-size: 25px;
+    font-weight: bold;
+}
+
+.cash-card {
+    border-left: 5px solid #16a34a;
+}
+
+.ewallet-card {
+    border-left: 5px solid #2563eb;
+}
+
+.grand-total-card {
+    border-left: 5px solid #7c3aed;
+}
+
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media(max-width:700px) {
+
+    .payment-totals {
+        grid-template-columns: 1fr;
+    }
+
+    .player-card,
+    .match-card {
+        width: 100%;
+    }
+
+    .courts {
+        grid-template-columns: 1fr;
+    }
+
+    header {
+        padding: 15px;
+    }
+
+    .container {
+        padding: 10px;
+    }
+
+    .shuttle-totals {
+        flex-direction: column;
+        gap: 12px;
+    }
+}
+
+
+/* Highly visible LM10 / LM60 shuttle selector */
+.court-shuttle-selector {
+    display: flex;
+    gap: 14px;
+    align-items: stretch;
+    margin: 12px 0 14px;
+    padding: 10px;
+    border: 2px solid #cbd5e1;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+.court-shuttle-selector label {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 8px 16px;
+    border: 3px solid #94a3b8;
+    border-radius: 10px;
+    background: #fff;
+    font-size: 17px;
+    font-weight: 900;
+    cursor: pointer;
+    transition: .15s ease;
+}
+.court-shuttle-selector input[type="radio"] {
+    width: clamp(16px, 2vw, 25px);
+    height: clamp(16px, 2vw, 25px);
+    min-width: clamp(16px, 2vw, 25px);
+    min-height: clamp(16px, 2vw, 25px);
+    margin: 0;
+    cursor: pointer;
+    accent-color: #334155;
+}
+
+/* Compact the shuttle controls as more courts are added */
+#courts.courts-many .court-shuttle-selector input[type="radio"] {
+    width: 20px; height: 20px; min-width: 20px; min-height: 20px;
+}
+#courts.courts-many .court-shuttle-selector label {
+    min-height: 42px; font-size: 15px; padding: 7px 10px;
+}
+#courts.courts-extra-many .court-shuttle-selector input[type="radio"] {
+    width: 16px; height: 16px; min-width: 16px; min-height: 16px;
+}
+#courts.courts-extra-many .court-shuttle-selector label {
+    min-height: 36px; font-size: 13px; padding: 5px 7px;
+}
+.court-shuttle-selector label.shuttle-lm10 {
+    border-color: #86efac;
+}
+.court-shuttle-selector label.shuttle-lm10:has(input:checked) {
+    background: #dcfce7;
+    border-color: #22c55e;
+    color: #166534;
+    box-shadow: 0 0 0 2px #bbf7d0 inset;
+}
+.court-shuttle-selector label.shuttle-lm10 input:checked {
+    accent-color: #16a34a;
+}
+.court-shuttle-selector label.shuttle-lm60 {
+    border-color: #fca5a5;
+}
+.court-shuttle-selector label.shuttle-lm60:has(input:checked) {
+    background: #fee2e2;
+    border-color: #ef4444;
+    color: #991b1b;
+    box-shadow: 0 0 0 2px #fecaca inset;
+}
+.court-shuttle-selector label.shuttle-lm60 input:checked {
+    accent-color: #dc2626;
+}
+
+</style>
+</head>
+
+
+<body>
+
+
+<header>
+
+    <h1>🏸 Badminton Queue Manager</h1>
+
+    <div class="header-info">
+
+        Data automatically saved
+
+        <span
+            id="saveStatus"
+            class="save-status"
+        >
+            ● Saved
+        </span>
+
+    </div>
+
+</header>
+
+
+<div class="container">
+
+
+<!-- =====================================================
+     ADD PLAYER
+===================================================== -->
+
+<div class="control-panel">
+
+    <h2>Add Player</h2>
+
+    <div class="form-row">
+
+        <input
+            id="playerName"
+            type="text"
+            placeholder="Enter player name"
+        >
+
+
+        <select id="playerGender" aria-label="Gender">
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+        </select>
+
+        <select id="playerCategory">
+
+            <option value="Beginner">
+                Beginner
+            </option>
+
+            <option value="Intermediate">
+                Intermediate
+            </option>
+
+            <option value="Advanced">
+                Advanced
+            </option>
+
+        </select>
+
+
+        <button
+            class="btn-primary"
+            onclick="addPlayer()"
+        >
+            + Add Player
+        </button>
+
+    </div>
+
+
+    <!-- FEES -->
+
+    <div class="fee-section">
+
+        <h3>💰 Court & Shuttle Fees</h3>
+
+        <div class="fee-row">
+
+            <div class="fee-box">
+
+                <label>
+                    Court Fee
+                </label>
+
+                <input
+                    id="courtFee"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value="0"
+                >
+
+            </div>
+
+
+            <div class="fee-box">
+
+                <label>
+                    LM10 Shuttle Fee
+                </label>
+
+                <input
+                    id="lm10Fee"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value="0"
+                >
+
+            </div>
+
+
+            <div class="fee-box">
+
+                <label>
+                    LM60 Shuttle Fee
+                </label>
+
+                <input
+                    id="lm60Fee"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value="0"
+                >
+
+            </div>
+
+        </div>
+
+
+        <div class="fee-summary">
+
+            Court:
+            <span id="displayCourtFee">
+                ₱0.00
+            </span>
+
+            &nbsp; | &nbsp;
+
+            LM10:
+            <span id="displayLM10Fee">
+                ₱0.00
+            </span>
+
+            &nbsp; | &nbsp;
+
+            LM60:
+            <span id="displayLM60Fee">
+                ₱0.00
+            </span>
+
+        </div>
+
+
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     WAITING PLAYERS
+===================================================== -->
+
+<div class="queue-section">
+
+    <div class="section-header">
+
+        <div>
+
+            <h2>
+                Waiting Players
+            </h2>
+
+            <div class="queue-info">
+
+                Click players to select them.
+                Maximum 4 players per match.
+                Drag cards to reorder the queue.
+
+                <br>
+
+                🔴 Players waiting 15 minutes or more
+                will be highlighted automatically.
+
+                <br>
+
+                ✅ When selected, over-15-min players turn <strong style="color:#16a34a;">GREEN</strong>.
+
+            </div>
+
+        </div>
+
+
+        <div class="queue-actions">
+            <button class="btn-blue" onclick="createMatch()">Pair Selected 4 Players</button>
+            <button class="btn-orange" onclick="randomTwoPairs()">🎲 Random 2 Pairs</button>
+        </div>
+
+    </div>
+
+
+    <div
+        id="waitingList"
+        class="waiting-list"
+
+        ondragover="allowDrop(event)"
+
+        ondrop="dropToWaiting(event)"
+
+        ondragenter="dragEnter(event)"
+
+        ondragleave="dragLeave(event)"
+    ></div>
+
+</div>
+
+
+<!-- =====================================================
+     READY MATCHES
+===================================================== -->
+
+<div class="matches-section">
+
+    <div class="section-header">
+
+        <div>
+
+            <h2>
+                Ready Matches
+            </h2>
+
+            <div class="queue-info">
+
+                Drag a complete match to an available court.
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div
+        id="matches"
+        class="matches"
+
+        ondragover="allowDrop(event)"
+
+        ondragenter="dragEnter(event)"
+
+        ondragleave="dragLeave(event)"
+
+        ondrop="dropMatchBackToReady(event)"
+    ></div>
+
+</div>
+
+
+<!-- =====================================================
+     COURTS
+===================================================== -->
+
+<div class="queue-section">
+
+    <div class="courts-header">
+
+        <h2>
+            Courts
+        </h2>
+
+
+        <button
+            class="btn-primary"
+            onclick="addCourt()"
+        >
+            + Add Court
+        </button>
+
+    </div>
+
+
+    <div
+        id="courts"
+        class="courts"
+    ></div>
+
+</div>
+
+
+<!-- =====================================================
+     SHUTTLE TOTAL USED
+===================================================== -->
+
+<div class="queue-section">
+
+    <div class="section-header">
+
+        <div>
+
+            <h2>
+                🏸 Shuttle Total Used
+            </h2>
+
+            <div class="queue-info">
+                Total games completed and shuttles used.
+            </div>
+
+        </div>
+
+        <button
+            type="button"
+            class="btn-danger"
+            onclick="resetAllData()"
+            title="Reset all players, games, courts, payments, statistics and fees"
+        >
+            ↻ Reset All Data
+        </button>
+
+    </div>
+
+    <div style="margin-bottom:15px;">
+        <input id="playerHistorySearch" type="search"
+            placeholder="Search player name for game history, partners and opponents..."
+            oninput="renderPlayerHistory(this.value)"
+            style="width:100%;max-width:520px;">
+        <div id="playerHistory" style="margin-top:12px;"></div>
+    </div>
+
+    <div id="shuttleTotals" class="shuttle-totals">
+
+        <div class="shuttle-total-item">
+            <span class="label">🎮 Total Games:</span>
+            <span id="totalGames" class="value games">0</span>
+        </div>
+
+        <div class="shuttle-total-item">
+            <span class="label">🏸 LM10 Used:</span>
+            <span id="totalLM10" class="value lm10">0</span>
+        </div>
+
+        <div class="shuttle-total-item">
+            <span class="label">🏸 LM60 Used:</span>
+            <span id="totalLM60" class="value lm60">0</span>
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     PLAYER SUMMARY
+===================================================== -->
+
+<div class="summary-section">
+
+    <h2>
+        📊 Player Summary
+    </h2>
+
+    <div class="queue-info">
+
+        Games played, shuttle usage and total amount to pay.
+
+    </div>
+
+    <div class="summary-search">
+        <input
+            type="search"
+            id="playerPaymentSearch"
+            placeholder="🔎 Search player to pay..."
+            oninput="renderSummary()"
+            autocomplete="off"
+        >
+        <button type="button" class="summary-search-clear" onclick="clearPlayerPaymentSearch()">Clear</button>
+    </div>
+
+    <br>
+
+
+    <table class="summary-table">
+
+        <thead>
+
+            <tr>
+
+                <th>
+                    Player
+                </th>
+
+                <th>
+                    Category
+                </th>
+
+                <th>
+                    Games
+                </th>
+
+                <th>
+                    LM10
+                </th>
+
+                <th>
+                    LM60
+                </th>
+
+                <th>
+                    Court Cost
+                </th>
+
+                <th>
+                    Shuttle Cost
+                </th>
+
+                <th>
+                    Total to Pay
+                </th>
+
+                <th>
+                    Payment
+                </th>
+
+                <th>
+                    Status
+                </th>
+
+            </tr>
+
+        </thead>
+
+
+        <tbody
+            id="summaryBody"
+        ></tbody>
+
+    </table>
+
+
+    <!-- PAYMENT TOTALS -->
+
+    <div class="payment-totals">
+
+        <div class="payment-total-card cash-card">
+
+            <div class="payment-total-label">
+
+                💵 Cash Total
+
+            </div>
+
+
+            <div
+                id="cashTotal"
+                class="payment-total-amount"
+            >
+                ₱0.00
+            </div>
+
+        </div>
+
+
+        <div
+            class="
+                                payment-total-card
+                                ewallet-card
+                            "
+        >
+
+            <div class="payment-total-label">
+
+                📱 E-Wallet Total
+
+            </div>
+
+
+            <div
+                id="ewalletTotal"
+                class="payment-total-amount"
+            >
+                ₱0.00
+            </div>
+
+        </div>
+
+
+        <div
+            class="
+                                payment-total-card
+                                grand-total-card
+                            "
+        >
+
+            <div class="payment-total-label">
+
+                💰 Grand Total
+
+            </div>
+
+
+            <div
+                id="grandTotal"
+                class="payment-total-amount"
+            >
+                ₱0.00
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+</div>
+
+
+<script>
+
+
+/* =====================================================
+   STORAGE
+===================================================== */
+
+const STORAGE_KEY =
+    "badmintonQueueManagerData_v7";
+
+const RESET_FLAG_KEY =
+    "badmintonQueueManagerWasReset_v1";
+
+
+/* =====================================================
+   DATA
+===================================================== */
+
+let allPlayers = [];
+
+let waitingQueue = [];
+
+let matches = [];
+
+let courts = [];
+
+let nextPlayerId = 1;
+
+let nextMatchId = 1;
+
+let nextCourtId = 1;
+
+let draggedType = null;
+
+let draggedId = null;
+
+// NEW: Simple counters for the Shuttle Total Used section
+let totalGamesCounter = 0;
+let totalLM10Counter = 0;
+let totalLM60Counter = 0;
+
+// One record per completed game. This makes shuttle totals
+// reliable even after refreshing or using the display monitor.
+let completedGames = [];
+
+
+/* =====================================================
+   SAVE
+===================================================== */
+
+function saveData() {
+
+    const data = {
+
+        allPlayers,
+
+        waitingQueue,
+
+        matches,
+
+        courts,
+
+        nextPlayerId,
+
+        nextMatchId,
+
+        nextCourtId,
+
+        totalGamesCounter,
+
+        totalLM10Counter,
+
+        totalLM60Counter,
+
+        completedGames,
+
+        fees: {
+
+            courtFee:
+                document.getElementById(
+                    "courtFee"
+                ).value,
+
+            lm10Fee:
+                document.getElementById(
+                    "lm10Fee"
+                ).value,
+
+            lm60Fee:
+                document.getElementById(
+                    "lm60Fee"
+                ).value
+
+        }
+
+    };
+
+
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(data)
+    );
+
+
+    const status =
+        document.getElementById(
+            "saveStatus"
+        );
+
+
+    if (status) {
+
+        status.textContent =
+            "● Saved";
+
+    }
+
+}
+
+
+/* =====================================================
+   LOAD
+===================================================== */
+
+function loadData() {
+
+    const saved =
+        localStorage.getItem(
+            STORAGE_KEY
+        );
+
+
+    if (!saved) {
+
+        if (!localStorage.getItem(RESET_FLAG_KEY)) {
+            addCourt(false);
+            addCourt(false);
+        }
+
+        return;
+
+    }
+
+
+    try {
+
+        const data =
+            JSON.parse(saved);
+
+
+        allPlayers =
+            data.allPlayers || [];
+
+
+        waitingQueue =
+            data.waitingQueue || [];
+
+
+        matches =
+            data.matches || [];
+
+
+        courts =
+            data.courts || [];
+
+
+        nextPlayerId =
+            data.nextPlayerId || 1;
+
+
+        nextMatchId =
+            data.nextMatchId || 1;
+
+
+        nextCourtId =
+            data.nextCourtId || 1;
+
+
+        // Load the simple counters
+        totalGamesCounter =
+            data.totalGamesCounter || 0;
+
+        totalLM10Counter =
+            data.totalLM10Counter || 0;
+
+        totalLM60Counter =
+            Number(data.totalLM60Counter) || 0;
+
+        completedGames =
+            Array.isArray(data.completedGames)
+                ? data.completedGames
+                : [];
+
+        /*
+           Older saved data did not have completedGames.
+           Keep the old counters, but use the new history
+           for all future completed games.
+        */
+        if (!Array.isArray(data.completedGames)) {
+            completedGames = [];
+        }
+
+
+        if (data.fees) {
+
+            document.getElementById(
+                "courtFee"
+            ).value =
+                data.fees.courtFee ?? 0;
+
+
+            document.getElementById(
+                "lm10Fee"
+            ).value =
+                data.fees.lm10Fee ?? 0;
+
+
+            document.getElementById(
+                "lm60Fee"
+            ).value =
+                data.fees.lm60Fee ?? 0;
+
+        }
+
+
+        /*
+           Upgrade old player records.
+        */
+
+        allPlayers.forEach(
+            player => {
+
+                if (!player.gender) {
+                    player.gender = "Male";
+                }
+
+                if (
+                    !player.paymentMethod
+                ) {
+
+                    player.paymentMethod =
+                        "Cash";
+
+                }
+
+
+                if (
+                    typeof player.paid !==
+                    "boolean"
+                ) {
+
+                    player.paid =
+                        false;
+
+                }
+
+
+                if (
+                    typeof player.gamesPlayed !==
+                    "number"
+                ) {
+
+                    player.gamesPlayed =
+                        0;
+
+                }
+
+
+                if (
+                    typeof player.lm10Used !==
+                    "number"
+                ) {
+
+                    player.lm10Used =
+                        0;
+
+                }
+
+
+                if (
+                    typeof player.lm60Used !==
+                    "number"
+                ) {
+
+                    player.lm60Used =
+                        0;
+
+                }
+
+
+                if (
+                    typeof player.courtCost !==
+                    "number"
+                ) {
+
+                    player.courtCost =
+                        0;
+
+                }
+
+
+                if (
+                    typeof player.shuttleCost !==
+                    "number"
+                ) {
+
+                    player.shuttleCost =
+                        0;
+
+                }
+
+
+                if (
+                    typeof player.totalPaid !==
+                    "number"
+                ) {
+
+                    player.totalPaid =
+                        0;
+
+                }
+
+
+                if (
+                    !player.waitingSince
+                ) {
+
+                    player.waitingSince =
+                        Date.now();
+
+                }
+
+            }
+        );
+
+
+        courts.forEach(
+            court => {
+
+                if (
+                    !Object.prototype.hasOwnProperty.call(
+                        court,
+                        "match"
+                    )
+                ) {
+
+                    court.match =
+                        null;
+
+                }
+
+
+                if (
+                    !court.shuttle
+                ) {
+
+                    court.shuttle =
+                        "LM10";
+
+                }
+
+
+                if (
+                    typeof court.elapsed !==
+                    "number"
+                ) {
+
+                    court.elapsed =
+                        0;
+
+                }
+
+
+                if (
+                    typeof court.playing !==
+                    "boolean"
+                ) {
+
+                    court.playing =
+                        false;
+
+                }
+
+            }
+        );
+
+
+        /*
+           Remove paid players
+           from waiting queue.
+        */
+
+        waitingQueue =
+            waitingQueue.filter(
+                id => {
+
+                    const player =
+                        getPlayer(id);
+
+
+                    return (
+                        player &&
+                        !player.paid
+                    );
+
+                }
+            );
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        allPlayers = [];
+
+        waitingQueue = [];
+
+        matches = [];
+
+        courts = [];
+
+        nextPlayerId = 1;
+
+        nextMatchId = 1;
+
+        nextCourtId = 1;
+
+        totalGamesCounter = 0;
+        totalLM10Counter = 0;
+        totalLM60Counter = 0;
+        completedGames = [];
+
+        addCourt(false);
+
+        addCourt(false);
+
+    }
+
+}
+
+
+/* =====================================================
+   GET PLAYER
+===================================================== */
+
+function getPlayer(id) {
+
+    return allPlayers.find(
+        player =>
+            player.id === id
+    );
+
+}
+
+
+/* =====================================================
+   GET MATCH
+===================================================== */
+
+function getMatch(id) {
+
+    return matches.find(
+        match =>
+            match.id === id
+    );
+
+}
+
+
+/* =====================================================
+   ADD PLAYER
+===================================================== */
+
+function addPlayer() {
+
+    const nameInput =
+        document.getElementById(
+            "playerName"
+        );
+
+
+    const category =
+        document.getElementById(
+            "playerCategory"
+        ).value;
+
+
+    const name =
+        nameInput.value.trim();
+
+
+    if (!name) {
+
+        alert(
+            "Please enter the player's name."
+        );
+
+        return;
+
+    }
+
+
+    const player = {
+
+        id:
+            nextPlayerId++,
+
+        name:
+            name,
+
+        gender:
+            document.getElementById("playerGender").value,
+
+        category:
+            category,
+
+        paymentMethod:
+            "Cash",
+
+        paid:
+            false,
+
+        waitingSince:
+            Date.now(),
+
+        selected:
+            false,
+
+        gamesPlayed:
+            0,
+
+        lm10Used:
+            0,
+
+        lm60Used:
+            0,
+
+        courtCost:
+            0,
+
+        shuttleCost:
+            0,
+
+        totalPaid:
+            0
+
+    };
+
+
+    allPlayers.push(
+        player
+    );
+
+
+    waitingQueue.push(
+        player.id
+    );
+
+
+    nameInput.value =
+        "";
+
+
+    saveData();
+
+    renderAll();
+
+}
+
+
+/* =====================================================
+   REMOVE PLAYER
+===================================================== */
+
+function removePlayer(id) {
+
+    if (
+        !confirm(
+            "Remove this player?"
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    allPlayers =
+        allPlayers.filter(
+            player =>
+                player.id !== id
+        );
+
+
+    waitingQueue =
+        waitingQueue.filter(
+            playerId =>
+                playerId !== id
+        );
+
+
+    matches.forEach(
+        match => {
+
+            match.playerIds =
+                match.playerIds.filter(
+                    playerId =>
+                        playerId !== id
+                );
+
+        }
+    );
+
+
+    matches =
+        matches.filter(
+            match =>
+                match.playerIds.length > 0
+        );
+
+
+    saveData();
+
+    renderAll();
+
+}
+
+
+/* =====================================================
+   PLAYER SELECTION
+===================================================== */
+
+function togglePlayerSelection(id) {
+
+    const player =
+        getPlayer(id);
+
+
+    if (
+        !player ||
+        player.paid
+    ) {
+
+        return;
+
+    }
+
+
+    player.selected =
+        !player.selected;
+
+
+    saveData();
+
+    renderWaiting();
+
+}
+
+
+/* =====================================================
+   CREATE MATCH
+===================================================== */
+
+function createMatch() {
+
+    const selectedIds = waitingQueue.filter(id => {
+        const player = getPlayer(id);
+        return player && player.selected;
+    });
+
+    if (selectedIds.length !== 4) {
+        alert("Please select exactly 4 players: players 1 & 2 are partners, and players 3 & 4 are the opponents.");
+        return;
+    }
+
+    matches.push({
+        id: nextMatchId++,
+        playerIds: [...selectedIds]
+    });
+
+    waitingQueue = waitingQueue.filter(id => !selectedIds.includes(id));
+    selectedIds.forEach(id => {
+        const player = getPlayer(id);
+        if (player) player.selected = false;
+    });
+
+    saveData();
+    renderAll();
+}
+
+function randomTwoPairs() {
+
+    const available = waitingQueue.map(id => getPlayer(id)).filter(p => p && !p.paid);
+
+    if (available.length < 4) {
+        alert("At least 4 waiting players are required.");
+        return;
+    }
+
+    const selectedIds = [...available]
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 4)
+        .map(p => p.id);
+
+    matches.push({
+        id: nextMatchId++,
+        playerIds: selectedIds
+    });
+
+    waitingQueue = waitingQueue.filter(id => !selectedIds.includes(id));
+    selectedIds.forEach(id => {
+        const player = getPlayer(id);
+        if (player) player.selected = false;
+    });
+
+    saveData();
+    renderAll();
+}
+
+function availableMatchPlayerIds(match) {
+
+    const usedElsewhere = new Set();
+
+    matches.forEach(other => {
+        if (other.id !== match.id) {
+            other.playerIds.forEach(id => usedElsewhere.add(id));
+        }
+    });
+
+    courts.forEach(court => {
+        if (court.match && court.match.id !== match.id) {
+            (court.match.playerIds || []).forEach(id => usedElsewhere.add(id));
+        }
+    });
+
+    return allPlayers.filter(player =>
+        !player.paid &&
+        !usedElsewhere.has(player.id) &&
+        (match.playerIds.includes(player.id) || waitingQueue.includes(player.id))
+    );
+}
+
+function changeMatchPlayer(matchId, slotIndex, playerId) {
+
+    const match = getMatch(matchId);
+    const newId = Number(playerId);
+    if (!match || !newId) return;
+
+    if (match.playerIds.includes(newId) && match.playerIds[slotIndex] !== newId) {
+        alert("That player is already in this match.");
+        renderMatches();
+        return;
+    }
+
+    const oldId = match.playerIds[slotIndex];
+    match.playerIds[slotIndex] = newId;
+
+    if (oldId) {
+        const oldPlayer = getPlayer(oldId);
+        if (oldPlayer && !oldPlayer.paid && !waitingQueue.includes(oldId)) {
+            waitingQueue.push(oldId);
+        }
+    }
+
+    waitingQueue = waitingQueue.filter(id => id !== newId);
+    const newPlayer = getPlayer(newId);
+    if (newPlayer) newPlayer.selected = false;
+
+    saveData();
+    renderAll();
+}
+
+function removeMatchPlayer(matchId, slotIndex) {
+
+    const match = getMatch(matchId);
+    if (!match) return;
+
+    const playerId = match.playerIds[slotIndex];
+    const player = getPlayer(playerId);
+
+    if (player && !player.paid && !waitingQueue.includes(playerId)) {
+        // Keep waitingSince unchanged when returning a player to the queue.
+        waitingQueue.push(playerId);
+    }
+
+    match.playerIds.splice(slotIndex, 1);
+
+    if (match.playerIds.length === 0) {
+        matches = matches.filter(m => m.id !== matchId);
+    }
+
+    saveData();
+    renderAll();
+}
+
+/* =====================================================
+   ADD COURT
+===================================================== */
+
+function addCourt(
+    shouldSave = true
+) {
+
+    const courtNumber =
+        courts.length + 1;
+
+
+    courts.push({
+
+        id:
+            nextCourtId++,
+
+        name:
+            "Court " +
+            courtNumber,
+
+        match:
+            null,
+
+        shuttle:
+            "LM10",
+
+        playing:
+            false,
+
+        startTime:
+            null,
+
+        elapsed:
+            0
+
+    });
+
+
+    if (shouldSave) {
+
+        saveData();
+
+    }
+
+
+    renderCourts();
+
+}
+
+
+/* =====================================================
+   REMOVE COURT
+===================================================== */
+
+function removeCourt(id) {
+
+    const court =
+        courts.find(
+            court =>
+                court.id === id
+        );
+
+
+    if (!court) {
+
+        return;
+
+    }
+
+
+    if (
+        court.match !== null
+    ) {
+
+        alert(
+            "Finish the current game before removing this court."
+        );
+
+        return;
+
+    }
+
+
+    courts =
+        courts.filter(
+            court =>
+                court.id !== id
+        );
+
+
+    courts.forEach(
+        (court, index) => {
+
+            court.name =
+                "Court " +
+                (index + 1);
+
+        }
+    );
+
+
+    saveData();
+
+    renderCourts();
+
+}
+
+
+/* =====================================================
+   DRAG START
+===================================================== */
+
+function dragStart(
+    event,
+    type,
+    id
+) {
+
+    draggedType =
+        type;
+
+
+    draggedId =
+        id;
+
+
+    event.dataTransfer.effectAllowed =
+        "move";
+
+
+    event.dataTransfer.setData(
+        "text/plain",
+        `${type}:${id}`
+    );
+
+}
+
+
+/* =====================================================
+   DRAG HELPERS
+===================================================== */
+
+function allowDrop(event) {
+
+    event.preventDefault();
+
+    event.dataTransfer.dropEffect =
+        "move";
+
+}
+
+
+function dragEnter(event) {
+
+    event.preventDefault();
+
+    event.currentTarget.classList.add(
+        "drag-over"
+    );
+
+}
+
+
+function dragLeave(event) {
+
+    event.currentTarget.classList.remove(
+        "drag-over"
+    );
+
+}
+
+
+/* =====================================================
+   DROP TO WAITING
+===================================================== */
+
+function dropToWaiting(event) {
+
+    event.preventDefault();
+
+    event.currentTarget.classList.remove(
+        "drag-over"
+    );
+
+
+    if (
+        draggedType === "match"
+    ) {
+
+        const match =
+            getMatch(
+                draggedId
+            );
+
+
+        if (!match) {
+
+            return;
+
+        }
+
+
+        match.playerIds.forEach(
+            id => {
+
+                const player =
+                    getPlayer(id);
+
+
+                if (
+                    !player ||
+                    player.paid
+                ) {
+
+                    return;
+
+                }
+
+
+                player.waitingSince =
+                    Date.now();
+
+
+                player.selected =
+                    false;
+
+
+                if (
+                    !waitingQueue.includes(
+                        id
+                    )
+                ) {
+
+                    waitingQueue.push(
+                        id
+                    );
+
+                }
+
+            }
+        );
+
+
+        matches =
+            matches.filter(
+                match =>
+                    match.id !==
+                    draggedId
+            );
+
+
+        saveData();
+
+        renderAll();
+
+        return;
+
+    }
+
+
+    if (
+        draggedType === "player"
+    ) {
+
+        const index =
+            waitingQueue.indexOf(
+                draggedId
+            );
+
+
+        if (
+            index === -1
+        ) {
+
+            return;
+
+        }
+
+
+        waitingQueue.splice(
+            index,
+            1
+        );
+
+
+        waitingQueue.push(
+            draggedId
+        );
+
+
+        saveData();
+
+        renderWaiting();
+
+    }
+
+}
+
+
+/* =====================================================
+   DROP MATCH BACK TO READY
+===================================================== */
+
+function dropMatchBackToReady(
+    event
+) {
+
+    event.preventDefault();
+
+    event.currentTarget.classList.remove(
+        "drag-over"
+    );
+
+
+    if (
+        draggedType !== "match"
+    ) {
+
+        return;
+
+    }
+
+
+    renderMatches();
+
+}
+
+
+/* =====================================================
+   DROP MATCH TO COURT
+===================================================== */
+
+function dropToCourt(
+    event,
+    courtId
+) {
+
+    event.preventDefault();
+
+    event.currentTarget.classList.remove(
+        "drag-over"
+    );
+
+
+    if (
+        draggedType !== "match"
+    ) {
+
+        alert(
+            "Please drag a paired match to the court."
+        );
+
+        return;
+
+    }
+
+
+    const court =
+        courts.find(
+            court =>
+                court.id === courtId
+        );
+
+
+    if (!court) {
+
+        return;
+
+    }
+
+
+    if (
+        court.match !== null
+    ) {
+
+        alert(
+            "This court already has a match."
+        );
+
+        return;
+
+    }
+
+
+    const match =
+        getMatch(
+            draggedId
+        );
+
+
+    if (!match) {
+
+        return;
+
+    }
+
+
+    /*
+       COPY THE MATCH FIRST.
+       This prevents the match from
+       disappearing unexpectedly.
+    */
+
+    court.match = {
+
+        id:
+            match.id,
+
+        playerIds:
+            [...match.playerIds]
+
+    };
+
+
+    court.playing =
+        false;
+
+
+    court.startTime =
+        null;
+
+
+    court.elapsed =
+        0;
+
+
+    /*
+       Now remove the ready match.
+    */
+
+    matches =
+        matches.filter(
+            match =>
+                match.id !==
+                draggedId
+        );
+
+
+    saveData();
+
+    renderAll();
+
+}
+
+
+/* =====================================================
+   COURT PLAYER EDIT / SWAP
+===================================================== */
+function availableCourtPlayerIds(court) {
+    const used = new Set();
+    matches.forEach(m => (m.playerIds || []).forEach(id => used.add(id)));
+    courts.forEach(c => {
+        if (c.id !== court.id && c.match) (c.match.playerIds || []).forEach(id => used.add(id));
+    });
+    return allPlayers.filter(p => !p.paid && !used.has(p.id));
+}
+
+function changeCourtPlayer(courtId, slotIndex, playerId) {
+    const court = courts.find(c => c.id === courtId);
+    const newId = Number(playerId);
+    if (!court || !court.match || !newId) return;
+
+    const ids = court.match.playerIds || [];
+    if (ids.includes(newId) && ids[slotIndex] !== newId) {
+        alert("That player is already on this court.");
+        renderCourts();
+        return;
+    }
+
+    const oldId = ids[slotIndex];
+    ids[slotIndex] = newId;
+
+    if (oldId && oldId !== newId) {
+        const oldPlayer = getPlayer(oldId);
+        if (oldPlayer && !oldPlayer.paid) {
+            oldPlayer.selected = false;
+            oldPlayer.waitingSince = Date.now();
+            if (!waitingQueue.includes(oldId)) waitingQueue.push(oldId);
+        }
+    }
+
+    waitingQueue = waitingQueue.filter(id => id !== newId);
+    const newPlayer = getPlayer(newId);
+    if (newPlayer) {
+        newPlayer.selected = false;
+        newPlayer.paid = false;
+    }
+
+    saveData();
+    renderAll();
+}
+
+/* =====================================================
+   START GAME
+===================================================== */
+
+function startGame(courtId) {
+
+    const court =
+        courts.find(
+            court =>
+                court.id === courtId
+        );
+
+
+    if (!court) {
+
+        return;
+
+    }
+
+
+    if (
+        court.match === null
+    ) {
+
+        alert(
+            "There is no match on this court."
+        );
+
+        return;
+
+    }
+
+
+    if (
+        court.playing
+    ) {
+
+        return;
+
+    }
+
+
+    court.startTime =
+        Date.now() -
+        (
+            court.elapsed *
+            1000
+        );
+
+
+    court.playing =
+        true;
+
+
+    saveData();
+
+    renderCourts();
+
+}
+
+
+/* =====================================================
+   PAUSE GAME
+===================================================== */
+
+function pauseGame(
+    courtId
+) {
+
+    const court =
+        courts.find(
+            court =>
+                court.id === courtId
+        );
+
+
+    if (
+        !court ||
+        !court.playing
+    ) {
+
+        return;
+
+    }
+
+
+    court.elapsed =
+        Math.floor(
+            (
+                Date.now() -
+                court.startTime
+            ) / 1000
+        );
+
+
+    court.playing =
+        false;
+
+
+    saveData();
+
+    renderCourts();
+
+}
+
+
+/* =====================================================
+   SHUTTLE
+===================================================== */
+
+function changeShuttle(
+    courtId,
+    value
+) {
+
+    const court =
+        courts.find(
+            court =>
+                court.id === courtId
+        );
+
+
+    if (!court) {
+
+        return;
+
+    }
+
+
+    court.shuttle =
+        value;
+
+
+    saveData();
+
+}
+
+
+/* =====================================================
+   GAME OVER
+===================================================== */
+
+function finishGame(courtId) {
+    const court = courts.find(c => c.id === courtId);
+    if (!court || !court.match) {
+        alert("There is no game on this court.");
+        return;
+    }
+
+    const match = court.match;
+    const shuttle = String(court.shuttle || "LM10").trim().toUpperCase();
+    const courtFee = parseFloat(document.getElementById("courtFee")?.value) || 0;
+    const lm10Fee = parseFloat(document.getElementById("lm10Fee")?.value) || 0;
+    const lm60Fee = parseFloat(document.getElementById("lm60Fee")?.value) || 0;
+
+    if (!confirm("Game Over? The players will return to Waiting Players, their games will be counted, and their waiting time will restart.")) return;
+
+    const playerIds = [...(match.playerIds || [])].filter(Boolean);
+
+    completedGames.push({
+        id: Date.now(),
+        courtId: court.id,
+        shuttle,
+        playerIds,
+        completedAt: Date.now()
+    });
+
+    totalGamesCounter = completedGames.length;
+    totalLM10Counter = completedGames.filter(g => String(g.shuttle).toUpperCase() === "LM10").length;
+    totalLM60Counter = completedGames.filter(g => String(g.shuttle).toUpperCase() === "LM60").length;
+
+    playerIds.forEach(playerId => {
+        const player = getPlayer(playerId);
+        if (!player) return;
+
+        player.gamesPlayed = (Number(player.gamesPlayed) || 0) + 1;
+        player.lm10Used = Number(player.lm10Used) || 0;
+        player.lm60Used = Number(player.lm60Used) || 0;
+        if (shuttle === "LM10") player.lm10Used += 1;
+        if (shuttle === "LM60") player.lm60Used += 1;
+
+        player.shuttleCost = player.lm10Used * lm10Fee + player.lm60Used * lm60Fee;
+        player.courtCost = courtFee;
+        player.totalPaid = player.courtCost + player.shuttleCost;
+
+        player.paid = false;
+        player.selected = false;
+        player.waitingSince = Date.now();
+        if (!waitingQueue.includes(player.id)) waitingQueue.push(player.id);
+    });
+
+    court.match = null;
+    court.playing = false;
+    court.startTime = null;
+    court.elapsed = 0;
+
+    saveData();
+    renderAll();
+}
+
+function markDonePlayingNotPaid(playerId) {
+
+    const player = getPlayer(playerId);
+    if (!player) return;
+
+    player.selected = false;
+    player.paid = false;
+
+    // Remove from active queue without changing waitingSince.
+    waitingQueue = waitingQueue.filter(id => id !== playerId);
+
+    saveData();
+    renderAll();
+}
+
+/* =====================================================
+   PAYMENT METHOD
+===================================================== */
+
+function changePaymentMethod(
+    playerId,
+    method
+) {
+
+    const player =
+        getPlayer(
+            playerId
+        );
+
+
+    if (!player) {
+
+        return;
+
+    }
+
+
+    player.paymentMethod =
+        method;
+
+
+    saveData();
+
+    renderSummary();
+
+    renderPaymentTotals();
+
+}
+
+
+/* =====================================================
+   MARK PLAYER PAID
+===================================================== */
+
+function markPlayerPaid(playerId) {
+    const player = getPlayer(playerId);
+    if (!player) return;
+
+    if (!player.paymentMethod) player.paymentMethod = "Cash";
+
+    const method = player.paymentMethod;
+    const total = Number(player.totalPaid) || 0;
+
+    if (!confirm(
+        "Mark " + player.name + " as PAID?\n\n" +
+        "Payment Method: " + method + "\n" +
+        "Total: ₱" + total.toFixed(2)
+    )) return;
+
+    player.paid = true;
+    player.selected = false;
+
+    // Remove from Waiting Players.
+    waitingQueue = waitingQueue.filter(id => id !== playerId);
+
+    // Remove from Ready Matches.
+    matches.forEach(match => {
+        match.playerIds = (match.playerIds || []).filter(id => id !== playerId);
+    });
+    matches = matches.filter(match => (match.playerIds || []).length > 0);
+
+    // Remove from Courts.
+    courts.forEach(court => {
+        if (court.match && Array.isArray(court.match.playerIds)) {
+            court.match.playerIds =
+                court.match.playerIds.filter(id => id !== playerId);
+
+            if (court.match.playerIds.length === 0) {
+                court.match = null;
+                court.playing = false;
+                court.startTime = null;
+                court.elapsed = 0;
+            }
+        }
+    });
+
+    saveData();
+    renderAll();
+}
+
+
+/* =====================================================
+   FORMAT TIME
+===================================================== */
+
+function formatTime(
+    seconds
+) {
+
+    seconds =
+        Math.max(
+            0,
+            Number(seconds) || 0
+        );
+
+
+    const hours =
+        Math.floor(
+            seconds / 3600
+        );
+
+
+    const minutes =
+        Math.floor(
+            (
+                seconds % 3600
+            ) / 60
+        );
+
+
+    const secs =
+        seconds % 60;
+
+
+    return (
+
+        String(hours)
+            .padStart(2, "0")
+
+        +
+
+        ":"
+
+        +
+
+        String(minutes)
+            .padStart(2, "0")
+
+        +
+
+        ":"
+
+        +
+
+        String(secs)
+            .padStart(2, "0")
+
+    );
+
+}
+
+
+/* =====================================================
+   WAITING TIME
+===================================================== */
+
+function getWaitingSeconds(
+    player
+) {
+
+    if (
+        !player ||
+        !player.waitingSince
+    ) {
+
+        return 0;
+
+    }
+
+
+    return Math.max(
+        0,
+        Math.floor(
+            (
+                Date.now() -
+                player.waitingSince
+            ) / 1000
+        )
+    );
+
+}
+
+
+function getWaitingTime(
+    player
+) {
+
+    return formatTime(
+        getWaitingSeconds(
+            player
+        )
+    );
+
+}
+
+
+/* =====================================================
+   15-MINUTE CHECK
+===================================================== */
+
+function isWaitingOver15Minutes(
+    player
+) {
+
+    return (
+        getWaitingSeconds(
+            player
+        ) >=
+        15 * 60
+    );
+
+}
+
+
+/* =====================================================
+   RENDER WAITING
+===================================================== */
+
+function renderWaiting() {
+
+    const container = document.getElementById("waitingList");
+    const activeIds = waitingQueue.filter(id => {
+        const player = getPlayer(id);
+        return player && !player.paid;
+    });
+
+    if (!activeIds.length) {
+        container.innerHTML = `<div class="empty-message">No players waiting.</div>`;
+        return;
+    }
+
+    container.innerHTML = activeIds.map(id => {
+        const player = getPlayer(id);
+        const alertActive = isWaitingOver15Minutes(player);
+
+        return `
+            <div class="player-card ${player.selected ? "selected" : ""} ${alertActive ? "waiting-alert" : ""}"
+                draggable="true"
+                ondragstart="dragStart(event,'player',${player.id})"
+                onclick="togglePlayerSelection(${player.id})">
+
+                <button class="remove-player" onclick="event.stopPropagation();removePlayer(${player.id})">✕</button>
+                <div class="player-name">${escapeHTML(player.name)}</div>
+                <span class="category ${String(player.category || "").toLowerCase()}">${escapeHTML(player.category || "")}</span>
+                <div style="font-size:11px;color:#64748b;margin-top:5px;">${escapeHTML(player.gender || "")}</div>
+
+                <div class="player-stats">
+                    🎮 Games: <strong>${player.gamesPlayed}</strong>
+                    &nbsp; | &nbsp; 🏸 LM10: <strong>${player.lm10Used}</strong>
+                    &nbsp; | &nbsp; LM60: <strong>${player.lm60Used}</strong>
+                </div>
+
+                <div class="waiting-time" id="waiting-${player.id}">
+                    ⏱ Waiting: <strong>${getWaitingTime(player)}</strong>
+                </div>
+
+                ${alertActive ? `<div class="waiting-alert-badge">⚠ WAITING OVER 15 MIN</div>` : ""}
+
+                <button class="done-playing-button"
+                    onclick="event.stopPropagation();markDonePlayingNotPaid(${player.id})">
+                    Done Playing • Not Paid
+                </button>
+            </div>`;
+    }).join("");
+}
+
+/* =====================================================
+   RENDER MATCHES
+===================================================== */
+
+function renderMatches() {
+
+    const container = document.getElementById("matches");
+
+    if (!matches.length) {
+        container.innerHTML = `<div class="empty-message">No ready matches.</div>`;
+        return;
+    }
+
+    container.innerHTML = matches.map(match => {
+
+        const ids = match.playerIds || [];
+        const options = availableMatchPlayerIds(match);
+
+        const slot = index => {
+            const currentId = ids[index];
+            const current = getPlayer(currentId);
+            const slotOptions = [...options];
+
+            if (current && !slotOptions.some(p => p.id === current.id)) {
+                slotOptions.push(current);
+            }
+
+            return `
+                <div class="match-player-row">
+                    <select class="match-player-select" onclick="event.stopPropagation()"
+                        onchange="changeMatchPlayer(${match.id},${index},this.value)">
+                        <option value="">Select player</option>
+                        ${slotOptions.map(p =>
+                            `<option value="${p.id}" ${p.id === currentId ? "selected" : ""}>${escapeHTML(p.name)}</option>`
+                        ).join("")}
+                    </select>
+                    <button class="match-player-remove"
+                        onclick="event.stopPropagation();removeMatchPlayer(${match.id},${index})">✕</button>
+                </div>`;
+        };
+
+        return `
+            <div class="match-card" draggable="true" ondragstart="dragStart(event,'match',${match.id})">
+                <div class="match-title">🏸 Match #${match.id}
+                    <span style="float:right;font-size:12px;">${ids.length}/4</span>
+                </div>
+                <div class="match-team-label">TEAM A — PARTNERS (1 & 2)</div>
+                ${slot(0)}${slot(1)}
+                <div class="match-team-label">TEAM B — OPPONENTS (3 & 4)</div>
+                ${slot(2)}${slot(3)}
+            </div>`;
+    }).join("");
+}
+
+/* =====================================================
+   RENDER COURTS
+===================================================== */
+
+function renderCourts() {
+    const courtsContainer = document.getElementById("courts");
+    if (courtsContainer) {
+        courtsContainer.classList.remove("courts-many", "courts-extra-many");
+        if (courts.length >= 7) {
+            courtsContainer.classList.add("courts-extra-many");
+        } else if (courts.length >= 4) {
+            courtsContainer.classList.add("courts-many");
+        }
+    }
+
+    const container =
+        document.getElementById(
+            "courts"
+        );
+
+
+    if (
+        courts.length === 0
+    ) {
+
+        container.innerHTML = `
+
+            <div class="empty-message">
+
+                No courts added.
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+
+    container.innerHTML =
+
+        courts
+            .map(
+                court => {
+
+                    let elapsed =
+                        court.elapsed;
+
+
+                    if (
+                        court.playing &&
+                        court.startTime
+                    ) {
+
+                        elapsed =
+                            Math.floor(
+                                (
+                                    Date.now() -
+                                    court.startTime
+                                ) / 1000
+                            );
+
+                    }
+
+
+                    const match =
+                        court.match;
+
+
+                    return `
+
+                        <div
+
+                            class="court"
+
+                            ondragover="
+                                allowDrop(event)
+                            "
+
+                            ondragenter="
+                                dragEnter(event)
+                            "
+
+                            ondragleave="
+                                dragLeave(event)
+                            "
+
+                            ondrop="
+                                dropToCourt(
+                                    event,
+                                    ${court.id}
+                                )
+                            "
+                        >
+
+                            <div class="court-header">
+
+                                <div
+                                    class="court-title"
+                                >
+
+                                    🏸
+                                    ${
+                                        court.name
+                                    }
+
+                                </div>
+
+
+                                <div
+                                    class="
+                                        court-status
+                                        ${
+                                            court.playing
+                                                ? "playing"
+                                                : ""
+                                        }
+                                    "
+                                >
+
+                                    ${
+                                        court.playing
+                                            ? "PLAYING"
+                                            : "AVAILABLE"
+                                    }
+
+                                </div>
+
+                            </div>
+
+
+                            <div class="court-drop">
+
+                                ${
+                                    match
+
+                                    ?
+
+                                    match.playerIds
+                                        .map((id, index) => {
+                                            const player = getPlayer(id);
+                                            if (!player) return "";
+                                            const options = availableCourtPlayerIds(court);
+                                            if (!options.some(p => p.id === player.id)) options.push(player);
+                                            return `
+                                                <div class="match-player-row">
+                                                    <select class="match-player-select" onclick="event.stopPropagation()" onchange="changeCourtPlayer(${court.id},${index},this.value)">
+                                                        ${options.map(p => `<option value="${p.id}" ${p.id === player.id ? "selected" : ""}>${escapeHTML(p.name)}</option>`).join("")}
+                                                    </select>
+                                                </div>`;
+                                        })
+                                        .join("")
+
+                                    :
+
+                                    `
+
+                                        <div
+                                            class="
+                                                empty-message
+                                            "
+                                        >
+
+                                            Drag a ready
+                                            match here
+
+                                        </div>
+
+                                    `
+                                }
+
+                            </div>
+
+
+                            ${
+                                match
+
+                                ?
+
+                                `
+
+                                    <div
+                                        class="
+                                            shuttle-label
+                                        "
+                                    >
+
+                                        🏸 Shuttle Used
+
+                                    </div>
+
+
+                                    <div class="court-shuttle-selector">
+                                        <label class="shuttle-lm10">
+                                            <input
+                                                type="radio"
+                                                name="shuttle-${court.id}"
+                                                value="LM10"
+                                                ${court.shuttle === "LM10" ? "checked" : ""}
+                                                onchange="changeShuttle(${court.id},this.value)"
+                                            >
+                                            <span>LM10</span>
+                                        </label>
+                                        <label class="shuttle-lm60">
+                                            <input
+                                                type="radio"
+                                                name="shuttle-${court.id}"
+                                                value="LM60"
+                                                ${court.shuttle === "LM60" ? "checked" : ""}
+                                                onchange="changeShuttle(${court.id},this.value)"
+                                            >
+                                            <span>LM60</span>
+                                        </label>
+                                    </div>
+
+
+                                    <div
+                                        class="game-time"
+                                        id="timer-${court.id}"
+                                    >
+
+                                        ${
+                                            formatTime(
+                                                elapsed
+                                            )
+                                        }
+
+                                    </div>
+
+
+                                    <div
+                                        class="
+                                            court-controls
+                                        "
+                                    >
+
+                                        ${
+                                            court.playing
+
+                                            ?
+
+                                            `
+
+                                                <button
+                                                    class="
+                                                        btn-orange
+                                                    "
+
+                                                    onclick="
+                                                        pauseGame(
+                                                            ${court.id}
+                                                        )
+                                                    "
+                                                >
+
+                                                    ⏸ Pause
+
+                                                </button>
+
+                                            `
+
+                                            :
+
+                                            `
+
+                                                <button
+                                                    class="
+                                                        btn-primary
+                                                    "
+
+                                                    onclick="
+                                                        startGame(
+                                                            ${court.id}
+                                                        )
+                                                    "
+                                                >
+
+                                                    ▶ Start Game
+
+                                                </button>
+
+                                            `
+                                        }
+
+
+                                        <button
+
+                                            class="
+                                                btn-danger
+                                            "
+
+                                            onclick="
+                                                finishGame(
+                                                    ${court.id}
+                                                )
+                                            "
+                                        >
+
+                                            🏁 Game Over
+
+                                        </button>
+
+                                    </div>
+
+                                `
+
+                                :
+
+                                `
+
+                                    <button
+
+                                        class="
+                                            btn-danger
+                                        "
+
+                                        onclick="
+                                            removeCourt(
+                                                ${court.id}
+                                            )
+                                        "
+                                    >
+
+                                        Remove Court
+
+                                    </button>
+
+                                `
+                            }
+
+                        </div>
+
+                    `;
+
+                }
+            )
+            .join("");
+
+}
+
+
+/* =====================================================
+   RENDER SHUTTLE TOTALS
+===================================================== */
+
+function renderPlayerHistory(query="") {
+
+    const container = document.getElementById("playerHistory");
+    if (!container) return;
+
+    const q = String(query || "").trim().toLowerCase();
+    if (!q) {
+        container.innerHTML = "";
+        return;
+    }
+
+    const player = allPlayers.find(p =>
+        String(p.name || "").toLowerCase().includes(q)
+    );
+
+    if (!player) {
+        container.innerHTML = `<div class="queue-info">No player found.</div>`;
+        return;
+    }
+
+    const history = completedGames.filter(game =>
+        Array.isArray(game.playerIds) && game.playerIds.includes(player.id)
+    );
+
+    if (!history.length) {
+        container.innerHTML = `<div style="padding:12px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;">
+            <strong>${escapeHTML(player.name)}</strong> — No completed games recorded yet.
+        </div>`;
+        return;
+    }
+
+    const rows = history.map((game,n) => {
+        const ids = game.playerIds || [];
+        const pos = ids.indexOf(player.id);
+        const partner = getPlayer(pos >= 0 ? (pos % 2 === 0 ? ids[pos+1] : ids[pos-1]) : null);
+        const opponentIds = pos < 2 ? [ids[2],ids[3]] : [ids[0],ids[1]];
+        const opponents = opponentIds.map(id => getPlayer(id)).filter(Boolean);
+
+        return `<div style="padding:10px;border-bottom:1px solid #e2e8f0;">
+            <strong>Game ${n+1}</strong>
+            <span style="margin-left:10px;color:#64748b;">🏸 ${escapeHTML(game.shuttle || "LM10")}</span>
+            <div style="margin-top:5px;font-size:13px;">
+                Partner: <strong>${partner ? escapeHTML(partner.name) : "—"}</strong>
+                &nbsp; | &nbsp; Opponents: <strong>${opponents.length ? opponents.map(p=>escapeHTML(p.name)).join(", ") : "—"}</strong>
+            </div>
+        </div>`;
+    }).join("");
+
+    container.innerHTML = `<div style="border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;background:white;">
+        <div style="padding:10px;background:#f8fafc;"><strong>${escapeHTML(player.name)}</strong> — ${history.length} completed game(s)</div>
+        ${rows}
+    </div>`;
+}
+
+function renderShuttleTotals() {
+
+    /*
+       Recalculate from completed game history instead of
+       relying on a counter that can become stale in old
+       localStorage data.
+    */
+    if (Array.isArray(completedGames)) {
+
+        totalGamesCounter =
+            completedGames.length;
+
+        totalLM10Counter =
+            completedGames.filter(
+                game =>
+                    String(game.shuttle || "")
+                        .trim()
+                        .toUpperCase() === "LM10"
+            ).length;
+
+        totalLM60Counter =
+            completedGames.filter(
+                game =>
+                    String(game.shuttle || "")
+                        .trim()
+                        .toUpperCase() === "LM60"
+            ).length;
+
+    }
+
+    document.getElementById(
+        "totalGames"
+    ).textContent =
+        totalGamesCounter;
+
+    document.getElementById(
+        "totalLM10"
+    ).textContent =
+        totalLM10Counter;
+
+    document.getElementById(
+        "totalLM60"
+    ).textContent =
+        totalLM60Counter;
+
+}
+
+
+/* =====================================================
+   RENDER SUMMARY
+===================================================== */
+
+function renderSummary() {
+
+    const body = document.getElementById("summaryBody");
+    const searchInput = document.getElementById("playerPaymentSearch");
+    const searchTerm = searchInput
+        ? searchInput.value.trim().toLowerCase()
+        : "";
+
+    const filteredPlayers = [...allPlayers]
+        .filter(player => {
+            if (!searchTerm) return true;
+            return String(player.name || "")
+                .toLowerCase()
+                .includes(searchTerm);
+        })
+        .sort((a, b) => Number(a.paid) - Number(b.paid));
+
+    if (allPlayers.length === 0) {
+        body.innerHTML = `
+            <tr>
+                <td colspan="10" style="text-align:center;color:#94a3b8;padding:25px;">
+                    No players yet.
+                </td>
+            </tr>`;
+        return;
+    }
+
+    if (filteredPlayers.length === 0) {
+        body.innerHTML = `
+            <tr>
+                <td colspan="10" style="text-align:center;color:#94a3b8;padding:25px;">
+                    No player found for "${escapeHTML(searchTerm)}".
+                </td>
+            </tr>`;
+        return;
+    }
+
+    body.innerHTML = filteredPlayers.map(player => {
+        const paymentMethod = player.paymentMethod || "Cash";
+        const amount = Number(player.totalPaid) || 0;
+
+        return `
+            <tr>
+                <td><strong>${escapeHTML(player.name)}</strong></td>
+                <td>${escapeHTML(player.category || "")}</td>
+                <td>${Number(player.gamesPlayed) || 0}</td>
+                <td>${Number(player.lm10Used) || 0}</td>
+                <td>${Number(player.lm60Used) || 0}</td>
+                <td>₱${(Number(player.courtCost) || 0).toFixed(2)}</td>
+                <td>₱${(Number(player.shuttleCost) || 0).toFixed(2)}</td>
+                <td class="total-pay">₱${amount.toFixed(2)}</td>
+                <td>
+                    <div class="summary-payment-controls">
+                        <select class="payment-method"
+                            ${player.paid ? "disabled" : ""}
+                            onchange="changePaymentMethod(${player.id},this.value)">
+                            <option value="Cash" ${paymentMethod === "Cash" ? "selected" : ""}>💵 Cash</option>
+                            <option value="E-Wallet" ${paymentMethod === "E-Wallet" ? "selected" : ""}>📱 E-Wallet</option>
+                        </select>
+                        ${player.paid
+                            ? `<span class="paid-badge">✓ PAID</span>`
+                            : `<button class="btn-primary paid-button" onclick="markPlayerPaid(${player.id})">✓ Paid</button>`
+                        }
+                    </div>
+                </td>
+                <td>
+                    ${player.paid
+                        ? `<span class="paid-badge">✓ PAID</span>`
+                        : `<span style="color:#dc2626;font-weight:bold;">UNPAID</span>`
+                    }
+                </td>
+            </tr>`;
+    }).join("");
+
+}
+
+function clearPlayerPaymentSearch() {
+    const input = document.getElementById("playerPaymentSearch");
+    if (!input) return;
+    input.value = "";
+    renderSummary();
+    input.focus();
+}
+
+/* =====================================================
+   PAYMENT TOTALS
+===================================================== */
+
+function renderPaymentTotals() {
+
+    let cashTotal =
+        0;
+
+
+    let ewalletTotal =
+        0;
+
+
+    allPlayers.forEach(
+        player => {
+
+            /*
+               Only PAID players
+               are included.
+            */
+
+            if (
+                !player.paid
+            ) {
+
+                return;
+
+            }
+
+
+            const amount =
+                Number(
+                    player.totalPaid
+                ) || 0;
+
+
+            if (
+                player.paymentMethod ===
+                "E-Wallet"
+            ) {
+
+                ewalletTotal +=
+                    amount;
+
+            } else {
+
+                cashTotal +=
+                    amount;
+
+            }
+
+        }
+    );
+
+
+    const grandTotal =
+        cashTotal +
+        ewalletTotal;
+
+
+    document.getElementById(
+        "cashTotal"
+    ).textContent =
+        "₱" +
+        cashTotal.toFixed(2);
+
+
+    document.getElementById(
+        "ewalletTotal"
+    ).textContent =
+        "₱" +
+        ewalletTotal.toFixed(2);
+
+
+    document.getElementById(
+        "grandTotal"
+    ).textContent =
+        "₱" +
+        grandTotal.toFixed(2);
+
+}
+
+
+/* =====================================================
+   FEE DISPLAY
+===================================================== */
+
+function updateFeeDisplay() {
+
+    const courtFee =
+        parseFloat(
+            document.getElementById(
+                "courtFee"
+            ).value
+        ) || 0;
+
+
+    const lm10Fee =
+        parseFloat(
+            document.getElementById(
+                "lm10Fee"
+            ).value
+        ) || 0;
+
+
+    const lm60Fee =
+        parseFloat(
+            document.getElementById(
+                "lm60Fee"
+            ).value
+        ) || 0;
+
+
+    document.getElementById(
+        "displayCourtFee"
+    ).textContent =
+        "₱" +
+        courtFee.toFixed(2);
+
+
+    document.getElementById(
+        "displayLM10Fee"
+    ).textContent =
+        "₱" +
+        lm10Fee.toFixed(2);
+
+
+    document.getElementById(
+        "displayLM60Fee"
+    ).textContent =
+        "₱" +
+        lm60Fee.toFixed(2);
+
+
+    saveData();
+
+}
+
+
+/* =====================================================
+   RESET ALL DATA
+===================================================== */
+
+function resetAllData() {
+
+    if (!confirm(
+        "⚠ RESET EVERYTHING?\n\n" +
+        "This will permanently delete ALL players, queue, matches, courts, statistics, payments and fees.\n\n" +
+        "This action cannot be undone."
+    )) {
+        return;
+    }
+
+    // Remove every piece of data used by this application.
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.setItem(RESET_FLAG_KEY, "1");
+
+    allPlayers = [];
+    waitingQueue = [];
+    matches = [];
+    courts = [];
+    nextPlayerId = 1;
+    nextMatchId = 1;
+    nextCourtId = 1;
+    totalGamesCounter = 0;
+    totalLM10Counter = 0;
+    totalLM60Counter = 0;
+    completedGames = [];
+
+    // Clear all fee inputs without creating new courts or saving old data back.
+    const courtFee = document.getElementById("courtFee");
+    const lm10Fee = document.getElementById("lm10Fee");
+    const lm60Fee = document.getElementById("lm60Fee");
+    if (courtFee) courtFee.value = 0;
+    if (lm10Fee) lm10Fee.value = 0;
+    if (lm60Fee) lm60Fee.value = 0;
+
+    // Clear the persisted record one more time after resetting the state.
+    localStorage.removeItem(STORAGE_KEY);
+
+    renderAll();
+
+    const status = document.getElementById("saveStatus");
+    if (status) status.textContent = "● Cleared";
+
+    alert("All badminton queue data has been completely cleared.");
+}
+
+
+/* =====================================================
+   ESCAPE HTML
+===================================================== */
+
+function escapeHTML(text) {
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+
+    div.textContent =
+        text;
+
+
+    return div.innerHTML;
+
+}
+
+
+/* =====================================================
+   RENDER EVERYTHING
+===================================================== */
+
+function renderAll() {
+
+    renderWaiting();
+
+    renderMatches();
+
+    renderCourts();
+
+    renderShuttleTotals();
+
+    renderSummary();
+
+    renderPaymentTotals();
+
+    updateFeeDisplay();
+
+}
+
+
+/* =====================================================
+   FEE LISTENERS
+===================================================== */
+
+document
+    .getElementById(
+        "courtFee"
+    )
+    .addEventListener(
+        "input",
+        updateFeeDisplay
+    );
+
+
+document
+    .getElementById(
+        "lm10Fee"
+    )
+    .addEventListener(
+        "input",
+        updateFeeDisplay
+    );
+
+
+document
+    .getElementById(
+        "lm60Fee"
+    )
+    .addEventListener(
+        "input",
+        updateFeeDisplay
+    );
+
+
+/* =====================================================
+   ENTER TO ADD PLAYER
+===================================================== */
+
+document
+    .getElementById(
+        "playerName"
+    )
+    .addEventListener(
+        "keydown",
+        function(event) {
+
+            if (
+                event.key ===
+                "Enter"
+            ) {
+
+                addPlayer();
+
+            }
+
+        }
+    );
+
+
+/* =====================================================
+   LIVE TIMERS
+===================================================== */
+
+setInterval(
+    function() {
+
+
+        /*
+           WAITING TIMERS
+        */
+
+        waitingQueue.forEach(
+            id => {
+
+                const player =
+                    getPlayer(id);
+
+
+                if (
+                    !player ||
+                    player.paid
+                ) {
+
+                    return;
+
+                }
+
+
+                const element =
+                    document.getElementById(
+                        `waiting-${id}`
+                    );
+
+
+                const playerCard =
+                    element
+                        ? element.closest(
+                            ".player-card"
+                        )
+                        : null;
+
+
+                const alertActive =
+                    isWaitingOver15Minutes(
+                        player
+                    );
+
+
+                /*
+                   Update timer.
+                */
+
+                if (element) {
+
+                    element.innerHTML = `
+
+                        ⏱ Waiting:
+
+                        <strong>
+
+                            ${
+                                getWaitingTime(
+                                    player
+                                )
+                            }
+
+                        </strong>
+
+                    `;
+
+                }
+
+
+                /*
+                   Update card color.
+                */
+
+                if (playerCard) {
+
+                    playerCard.classList.toggle(
+                        "waiting-alert",
+                        alertActive
+                    );
+
+
+                    let badge =
+                        playerCard.querySelector(
+                            ".waiting-alert-badge"
+                        );
+
+
+                    /*
+                       Add warning badge.
+                    */
+
+                    if (
+                        alertActive &&
+                        !badge
+                    ) {
+
+                        badge =
+                            document.createElement(
+                                "div"
+                            );
+
+
+                        badge.className =
+                            "waiting-alert-badge";
+
+
+                        badge.textContent =
+                            "⚠ WAITING OVER 15 MIN";
+
+
+                        const paymentSection =
+                            playerCard.querySelector(
+                                ".payment-section"
+                            );
+
+
+                        if (
+                            paymentSection
+                        ) {
+
+                            playerCard.insertBefore(
+                                badge,
+                                paymentSection
+                            );
+
+                        } else {
+
+                            playerCard.appendChild(
+                                badge
+                            );
+
+                        }
+
+                    }
+
+
+                    /*
+                       Remove warning badge
+                       when under 15 minutes.
+                    */
+
+                    if (
+                        !alertActive &&
+                        badge
+                    ) {
+
+                        badge.remove();
+
+                    }
+
+                }
+
+            }
+        );
+
+
+        /*
+           COURT TIMERS
+        */
+
+        courts.forEach(
+            court => {
+
+                if (
+                    !court.playing ||
+                    !court.startTime
+                ) {
+
+                    return;
+
+                }
+
+
+                court.elapsed =
+                    Math.floor(
+                        (
+                            Date.now() -
+                            court.startTime
+                        ) / 1000
+                    );
+
+
+                const timer =
+                    document.getElementById(
+                        `timer-${court.id}`
+                    );
+
+
+                if (timer) {
+
+                    timer.textContent =
+                        formatTime(
+                            court.elapsed
+                        );
+
+                }
+
+            }
+        );
+
+
+    },
+    1000
+);
+
+
+/* =====================================================
+   INITIALIZE
+===================================================== */
+
+loadData();
+
+renderAll();
+
+</script>
+
+</body>
+</html>

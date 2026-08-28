@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Badminton Court Display</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:Arial,Helvetica,sans-serif;background:#07130d;color:#fff}
+body{padding:20px}
+.courts{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:18px}
+.court{background:#10241a;border:2px solid #245437;border-radius:18px;padding:20px;min-height:330px;box-shadow:0 8px 25px rgba(0,0,0,.25)}
+.court.playing{border-color:#ef4444}
+.court-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
+.court-name{font-size:28px;font-weight:800}
+.status{padding:7px 12px;border-radius:999px;font-weight:800;font-size:13px;background:#166534}
+.status.playing{background:#b91c1c}
+.players{display:grid;gap:10px;margin:18px 0}
+.player{background:#173a27;border-radius:10px;padding:12px 14px;font-size:20px;font-weight:700}
+.player small{display:block;font-size:12px;color:#a7f3d0;margin-top:3px}
+.timer{font-family:monospace;text-align:center;font-size:42px;font-weight:800;margin:15px 0}
+.shuttle{text-align:center;color:#bbf7d0;font-weight:700}
+.ready{margin-top:24px;background:#10241a;border:2px solid #245437;border-radius:18px;padding:18px}.ready h2{margin:0 0 12px}.ready-match{background:#173a27;border-radius:10px;padding:10px 14px;margin:8px 0;font-weight:700}.empty{height:200px;display:flex;align-items:center;justify-content:center;color:#71907e;font-size:20px;text-align:center}
+@media(max-width:700px){body{padding:10px}.courts{grid-template-columns:1fr}.court{min-height:300px}.court-name{font-size:24px}.timer{font-size:34px}}
+</style>
+</head>
+<body>
+<main class="courts" id="courts"></main>
+<section class="ready"><h2>Next Games — Ready Matches</h2><div id="readyMatches"></div></section>
+<script>
+const STORAGE_KEY="badmintonQueueManagerData_v7";
+
+function esc(v){const d=document.createElement("div");d.textContent=v??"";return d.innerHTML}
+function fmt(sec){
+    sec=Math.max(0,Number(sec)||0);
+    const h=String(Math.floor(sec/3600)).padStart(2,"0");
+    const m=String(Math.floor((sec%3600)/60)).padStart(2,"0");
+    const s=String(sec%60).padStart(2,"0");
+    return `${h}:${m}:${s}`;
+}
+function getData(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||{}}catch(e){return {}}}
+
+function render(){
+    const d=getData(), players=d.allPlayers||[], courts=d.courts||[];
+    const byId=new Map(players.map(p=>[p.id,p]));
+    const now=Date.now();
+
+    document.getElementById("courts").innerHTML=courts.length ? courts.map(c=>{
+        let elapsed=Number(c.elapsed)||0;
+        if(c.playing && c.startTime){
+            elapsed=Math.floor((now-c.startTime)/1000);
+        }
+
+        const match=c.match;
+
+        return `<section class="court ${c.playing?"playing":""}">
+            <div class="court-head">
+                <div class="court-name">${esc(c.name||("Court "+c.id))}</div>
+                <div class="status ${c.playing?"playing":""}">${c.playing?"PLAYING":"AVAILABLE"}</div>
+            </div>
+            ${match
+                ? `<div class="players">${(match.playerIds||[]).map(id=>{
+                    const p=byId.get(id);
+                    return p ? `<div class="player">${esc(p.name)}<small>${esc(p.category||"")}</small></div>` : "";
+                }).join("")}</div>
+                <div class="timer">${fmt(elapsed)}</div>
+                `
+                : `<div class="empty">COURT AVAILABLE<br>Waiting for next match</div>`}
+        </section>`;
+    }).join("") : `<div class="court"><div class="empty">No courts available</div></div>`;
+
+    const ready = d.matches || [];
+    document.getElementById("readyMatches").innerHTML = ready.length ? ready.map((m,i) => {
+        const names = (m.playerIds || []).map(id => byId.get(id)?.name).filter(Boolean);
+        return `<div class="ready-match">${i + 1}. ${names.map(esc).join(" &nbsp; • &nbsp; ")}</div>`;
+    }).join("") : `<div class="empty" style="height:auto;padding:20px">No ready matches.</div>`;
+}
+
+render();
+setInterval(render,1000);
+window.addEventListener("storage",render);
+window.addEventListener("focus",render);
+</script>
+</body>
+</html>
